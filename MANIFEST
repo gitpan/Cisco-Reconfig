@@ -9,3 +9,4 @@ t/smalltest.t
 t/stringconfig.t
 t/trailingindent.t
 t/banner.t
+t/indentbug.t

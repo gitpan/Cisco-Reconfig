@@ -5,7 +5,7 @@ package Cisco::Reconfig;
 @EXPORT = qw(readconfig);
 @EXPORT_OK = qw(readconfig stringconfig);
 
-$VERSION = 0.5;
+$VERSION = 0.6;
 
 require Exporter;
 use strict;
@@ -83,19 +83,32 @@ sub rc1
 	weaken $config->{$cntx};
 
 	$dseq++;
-	for(;$line;$line = <$fh>) {
+	my $prev;
+	my $ciscobug;
+	for(;$line;$prev = $line, $line = <$fh>) {
 		$_ = $line;
 		s/^( *)//;
 		my $in = length($1);
 		s/^(no +)//;
 		my $no = $1;
 		if ($in > $indent) {
-			die unless $last;
-			$last->{$subs} = rc1($in, "${seq}aaa", $last, $line);
-			undef $last;
-			redo if $line;
+			if ($last) {
+				$last->{$subs} = rc1($in, "${seq}aaa", $last, $line);
+				undef $last;
+				redo if $line;
+			} else {
+				# this really shouldn't happen.  But it does.
+				die unless $prev eq "!\n";
+				die unless $indent == 0;
+				$ciscobug = 1;
+				$indent = $in;
+			}
 		} elsif ($in < $indent) {
-			return $config;
+			if ($ciscobug && $in == 0) {
+				$indent = 0;
+			} else {
+				return $config;
+			}
 		}
 		next if /^$/;
 		next if /^\s*!/;
@@ -177,7 +190,7 @@ sub rc1
 				push(@{$subnull->{$dupl}}, $l);
 			}
 			warn "parse probably failed"
-				unless $line !~ /^\^C[\r]?$/;
+				unless $line =~ /^\^C[\r]?$/;
 		}
 	}
 	return $config;
@@ -249,6 +262,26 @@ sub text
 	}
 	die unless @p;
 	return $self->{$p[0]}->text;
+}
+
+sub alltext 
+{
+	my ($self) = @_;
+	my $t = '';
+	$t = $self->{$text} 
+		if defined $self->{$text};
+	my (@p) = $self->sortit(grep(! /$spec/o, keys %$self));
+	if (@p > 1) {
+		$t .= join('', map { $self->{$_}->alltext } @p);
+	} elsif ($self->{$dupl}) {
+		$t .= join('', map { $_->{$text} } @{$self->{$dupl}});
+	} elsif (@p == 1) {
+		$t .= $self->{$p[0]}->alltext;
+	}
+	if ($self->{$subs}) {
+		$t .= $self->{$subs}->alltext;
+	}
+	return $t;
 }
 
 sub chomptext

@@ -1,3 +1,10 @@
+= 2003/06/10 0.6
+
+"Fix" bug https://rt.cpan.org/Ticket/Display.html?id=2749 reported
+by gtamboise@houston.sns.slb.com.  Actually this is a Cisco bug
+and Cisco::Reconfig can now work around it.
+
+Fixed a bug in banner handling. 
 
 = 2003/05/28 0.5
 
