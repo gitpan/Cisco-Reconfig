@@ -4,7 +4,7 @@ package Cisco::Reconfig;
 @ISA = qw(Exporter);
 @EXPORT = qw(readconfig);
 
-$VERSION = 0.1;
+$VERSION = 0.2;
 
 require Exporter;
 use strict;
@@ -49,7 +49,7 @@ sub readconfig
 {
 	my ($file) = @_;
 
-	$fh = ref($file) ? $file : IO::File->open($file);
+	$fh = ref($file) ? $file : IO::File->new($file, "r");
 
 	$line = <$fh>;
 	return rc1(0, 'aaaa', $undef, "! whole enchalada\n");
