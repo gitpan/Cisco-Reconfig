@@ -1,4 +1,17 @@
 
+= 2003/05/26 0.3
+
+Replaced destroy() with Scalar::Util::weaken at the suggestion and
+with the much assistance of Martin Lorensen <martin@lorensen.dk>.
+Thank you Martin!
+
+->destroy() is now deprecated.
+
+Also Bugfix to get() from Martin Lorensen.
+
+Added a special case for banners to fix a bug pointed out by
+Mike Drons <mdrons@ins.com>.
+
 = 2003/01/27 0.2
 
 A small problem with IO::File possibly resolved.

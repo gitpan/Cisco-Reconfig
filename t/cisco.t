@@ -3,6 +3,9 @@
 use Cisco::Reconfig;
 use Test;
 use Carp qw(verbose);
+use Scalar::Util qw(weaken);
+
+use strict;
 
 my $debugdump = 0;
 
@@ -10,7 +13,7 @@ if ($debugdump) {
 	$Cisco::Reconfig::nonext = 1;
 }
 
-BEGIN { plan test => 39 };
+BEGIN { plan test => 41 };
 
 sub wok
 {
@@ -42,8 +45,42 @@ if ($debugdump) {
 ok(defined $config);
 
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('router bgp', 'neighbor 207.181.192.13')->set(<<END);
+my $x = $config->set('route-map OSPFTag', <<END);
+	route-map OSPFTag permit 30
+	 match ip address 109
+	 set metric 24
+	 set metric-type type-2
+	 set tag 0
+	 set level backbone
+	!
+END
+ok($x,'');
+
+
+}
+# -----------------------------------------------------------------
+{
+
+my $x = $config->set('route-map source-route-to-fred', <<END);
+	route-map source-route-to-fred
+	 set ip next-hop 1.2.3.4
+	!
+END
+ok($x,<<END);
+route-map source-route-to-fred
+ set ip next-hop 1.2.3.4
+exit
+END
+
+}
+# -----------------------------------------------------------------
+
+# -----------------------------------------------------------------
+{
+
+my $x = $config->get('router bgp', 'neighbor 207.181.192.13')->set(<<END);
 	neighbor 207.181.192.13 remote-as 10368
 	neighbor 207.181.192.13 ebgp-multihop 3
 	neighbor 207.181.192.13 update-source Loopback0
@@ -58,9 +95,11 @@ router bgp 10993
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('router bgp', 'neighbor 207.181.192.13')->set(<<END);
+my $x = $config->get('router bgp', 'neighbor 207.181.192.13')->set(<<END);
 	neighbor 207.181.192.13 remote-as 10368
 	neighbor 207.181.192.13 ebgp-multihop 3
 	neighbor 207.181.192.13 update-source Loopback0
@@ -72,18 +111,22 @@ $x = $config->get('router bgp', 'neighbor 207.181.192.13')->set(<<END);
 END
 ok($x,'');
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('router rip')->set(<<END);
+my $x = $config->get('router rip')->set(<<END);
 	passive-interface default
 	no passive-interface Tunnel0
 	default-metric 2
 END
 ok($x,'');
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('router bgp', 'neighbor 207.181.192.13')->set(<<END);
+my $x = $config->get('router bgp', 'neighbor 207.181.192.13')->set(<<END);
 	neighbor 207.181.192.13 remote-as 10368
 	neighbor 207.181.192.13 ebgp-multihop 3
 	neighbor 207.181.192.13 update-source Loopback0
@@ -100,9 +143,11 @@ router bgp 10993
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('router rip')->set(<<END);
+my $x = $config->get('router rip')->set(<<END);
 	passive-interface default
 	no passive-interface Tunnel0
 	default-metric 3
@@ -115,9 +160,11 @@ router rip
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd', 'class-vc')->set(<<END);
+my $x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd', 'class-vc')->set(<<END);
 class-vc dsl195
 END
 ok($x,<<END);
@@ -129,9 +176,11 @@ interface ATM3/0.40 multipoint
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->set('router rip', <<END);
+my $x = $config->set('router rip', <<END);
 	router rip
 	 passive-interface default
 	 no passive-interface Tunnel0
@@ -147,9 +196,11 @@ router rip
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->set('router rip', <<END);
+my $x = $config->set('router rip', <<END);
 	router rip
 	 passive-interface default
 	 no passive-interface Tunnel0
@@ -159,9 +210,11 @@ END
 ok($x,'');
 
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface ATM3/0.40')->set('pvc 1894635-dasterd', 'class-vc',<<END);
+my $x = $config->get('interface ATM3/0.40')->set('pvc 1894635-dasterd', 'class-vc',<<END);
 class-vc dsl196
 END
 ok($x,<<END);
@@ -173,9 +226,11 @@ interface ATM3/0.40 multipoint
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd')->set('class-vc',<<END);
+my $x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd')->set('class-vc',<<END);
 class-vc dsl197
 END
 ok($x,<<END);
@@ -187,9 +242,12 @@ interface ATM3/0.40 multipoint
 exit
 END
 
-# -----------------------------------------------------------------
 
-$x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd')->set('class-vc',<<END);
+}
+# -----------------------------------------------------------------
+{
+
+my $x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd')->set('class-vc',<<END);
 class-vc dsl198
 END
 ok($x,<<END);
@@ -201,9 +259,11 @@ interface ATM3/0.40 multipoint
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->set('interface ATM3/0.40', 'pvc 1894635-dasterd', 'class-vc',<<END);
+my $x = $config->set('interface ATM3/0.40', 'pvc 1894635-dasterd', 'class-vc',<<END);
 class-vc dsl199
 END
 ok($x,<<END);
@@ -215,17 +275,21 @@ interface ATM3/0.40
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd', 'class-vc')->text;
+my $x = $config->get('interface ATM3/0.40', 'pvc 1894635-dasterd', 'class-vc')->text;
 ok($x,<<END);
   class-vc dsl192
 END
 
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip address')->context->text;
+my $x = $config->get('interface Serial0', 'ip address')->context->text;
 ok($x,<<END);
  description Cross-connect to Foobar
  ip address 207.181.198.194 255.255.255.252
@@ -233,71 +297,91 @@ ok($x,<<END);
  bandwidth 154400
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip address')->context->context->text;
+my $x = $config->get('interface Serial0', 'ip address')->context->context->text;
 ok($x,<<END);
 interface Serial0
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip address')->single->next->text;
+my $x = $config->get('interface Serial0', 'ip address')->single->next->text;
 ok($x,<<END);
  ip access-group 151 in
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip')->zoom->text;
+my $x = $config->get('interface Serial0', 'ip')->zoom->text;
 ok($x,<<END);
  ip address 207.181.198.194 255.255.255.252
  ip access-group 151 in
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip')->zoom;
+my $x = $config->get('interface Serial0', 'ip')->zoom;
 ok(defined $x);
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip address')->single->text;
+my $x = $config->get('interface Serial0', 'ip address')->single->text;
 ok($x,<<END);
  ip address 207.181.198.194 255.255.255.252
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip')->single;
+my $x = $config->get('interface Serial0', 'ip')->single;
 ok(! defined $x);
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Serial0', 'ip')->text;
+my $x = $config->get('interface Serial0', 'ip')->text;
 ok($x,<<END);
  ip address 207.181.198.194 255.255.255.252
  ip access-group 151 in
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Loopback5', 'ip address')->text;
+my $x = $config->get('interface Loopback5', 'ip address')->text;
 ok($x, <<END);
  ip address 212.212.60.142 255.255.255.255
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Ethernet0', 'ip address')->text;
+my $x = $config->get('interface Ethernet0', 'ip address')->text;
 ok($x, <<END);
  ip address 128.32.32.3 255.255.255.192
 END
 
+}
 # -----------------------------------------------------------------
+{
 
 
-$x = '';
+my $x = '';
 for my $i ($config->get('interface')->all) {
 	next unless $i->get('description')->text =~ /Foobar/;
 	$x .= $i->text;
@@ -309,10 +393,12 @@ interface Tunnel1
 interface Serial0
 END
 
+}
 # -----------------------------------------------------------------
+{
 
 
-$x = '';
+my $x = '';
 for my $i ($config->get('interface')->all) {
 	next unless $i->get('description') =~ /Foobar/;
 	$x .= $i->text;
@@ -325,9 +411,11 @@ interface Serial0
 END
 
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = '';
+my $x = '';
 for my $i ($config->get('interface')->all) {
 	next unless $i->get('description')->text =~ /Foobar/;
 	$x .= $i->get('ip address')->text;
@@ -339,9 +427,11 @@ ok($x,<<END);
  ip address 207.181.198.194 255.255.255.252
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = '';
+my $x = '';
 for my $i ($config->get('interface')->all) {
 	next unless $i->get('description')->text =~ /Foobar/;
 	$x .= $i->get('ip address')->text;
@@ -353,10 +443,12 @@ ok($x,<<END);
  ip address 207.181.198.194 255.255.255.252
 END
 
+}
 # -----------------------------------------------------------------
+{
 
 
-$x = '';
+my $x = '';
 my $ser0 = $config->get('interface Serial0');
 $x .= $ser0->set('ip address', <<END);
 	ip address 207.181.198.194  255.255.255.252
@@ -364,11 +456,13 @@ END
 ok($x,<<END);
 END
 
+}
 # -----------------------------------------------------------------
+{
 
 
-$x = '';
-$ser0 = $config->get('interface Serial0');
+my $x = '';
+my $ser0 = $config->get('interface Serial0');
 $x .= $ser0->set('ip address', <<END);
 	ip address 207.181.178.195  255.255.255.252
 END
@@ -379,23 +473,29 @@ interface Serial0
 exit
 END
 
+}
 # -----------------------------------------------------------------
+{
 
 
-$x = '';
-@i = $config->get('interface')->all;
+my $x = '';
+my (@i) = $config->get('interface')->all;
 ok($#i,13);
 
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = '';
-@i = $config->get('interface');
+my $x = '';
+my (@i) = $config->get('interface');
 ok($#i,13);
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = '';
+my $x = '';
 for my $i ($config->get('interface')->all(qr{^Loopback})) {
 	$x .= $i;
 }
@@ -407,9 +507,11 @@ interface Loopback4
 interface Loopback5
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = '';
+my $x = '';
 for my $i ($config->get('interface')->all(qr{^Loopback})) {
 	$x .= $i->text;
 }
@@ -421,31 +523,40 @@ interface Loopback4
 interface Loopback5
 END
 
+}
 # -----------------------------------------------------------------
+{
 
 
 my $v = $config->get('version');
-$x = $v->text;
+my $x = $v->text;
 ok($x, <<END);
 version 11.1
 END
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = $config->get('interface Ethernet0', 'ip address')->text;
+my $x = $config->get('interface Ethernet0', 'ip address')->text;
 ok($x, <<END);
  ip address 128.32.32.3 255.255.255.192
 END
 
-# -----------------------------------------------------------------
 
-$x = '';
-@i = $config->get('interface');
+}
+# -----------------------------------------------------------------
+{
+
+my $x = '';
+my (@i) = $config->get('interface');
 ok($#i,13);
 
+}
 # -----------------------------------------------------------------
+{
 
-$x = '';
+my $x = '';
 for my $ip ($config->get('interface', 'ip address')) {
 	$x .= $ip->text;
 }
@@ -464,6 +575,7 @@ ok($x,<<END);
  no ip address
 END
 
+}
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
@@ -471,18 +583,46 @@ END
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
+{
+
+	if (0) {
+		# see what's not isweak().
+
+		use Scalar::Util qw(isweak);
+		use Data::Dumper;
+		my %done;
+		my (@d) = $config;
+		while (@d) {
+			my $self = shift(@d);
+			next if $done{$self}++;
+			for my $k (%$self) {
+				if (ref $self->{$k}) {
+					if (isweak $self->{$k}) {
+						delete $self->{$k};
+					} else {
+						push(@d, $self->{$k});
+					}
+				} else {
+					delete $self->{$k};
+				}
+			}
+		}
+		print STDERR Dumper($config);
+	}
 
 # last test
 
-my $dc = 0;
-sub Cisco::Reconfig::DESTROY 
-{
-	$dc++;
+	my $dc = 0;
+	sub Cisco::Reconfig::DESTROY 
+	{
+		$dc++;
+	}
+	#$config->destroy();
+	undef $config;
+	#print STDERR "DC=$dc\n";
+	ok($dc > 700);
+
 }
-$config->destroy;
-ok($dc > 300);
-
-
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
 

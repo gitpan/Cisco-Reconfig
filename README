@@ -246,13 +246,6 @@ MISCELLANEOUS METHODS
     ->block()
         Returns true if the object represents a whole configuration block.
 
-    ->destroy()
-        Cisco::Reconfig objects are highly self-referential. They will not
-        deallocate themselves when they go out of scope. The "destory()"
-        method will cause the entire nest of them to loose all their values
-        which will allow them to be deallocated. Use "destory()" only if
-        you're reading more than one configruation file in your program.
-
 OVERLOADING
     Two operators are overloaded: boolean tests and stringification.
     Cisco::Reconfig objects booleanify as true if they are the special

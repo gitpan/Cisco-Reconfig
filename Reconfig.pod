@@ -277,14 +277,6 @@ nessasary to undo a C<setcontext()>.
 
 Returns true if the object represents a whole configuration block.
 
-=item ->destroy()
-
-Cisco::Reconfig objects are highly self-referential.  They will not deallocate
-themselves when they go out of scope.  The C<destory()> method will
-cause the entire nest of them to loose all their values which will
-allow them to be deallocated.  Use C<destory()> only if you're reading
-more than one configruation file in your program.
-
 =back
 
 =head1 OVERLOADING

@@ -3,8 +3,9 @@ package Cisco::Reconfig;
 
 @ISA = qw(Exporter);
 @EXPORT = qw(readconfig);
+@EXPORT_OK = qw(readconfig stringconfig);
 
-$VERSION = 0.2;
+$VERSION = 0.3;
 
 require Exporter;
 use strict;
@@ -12,6 +13,13 @@ use Text::Tabs;
 use Carp;
 use Carp qw(verbose);
 use IO::File;
+use Scalar::Util qw(weaken);
+my $iostrings;
+BEGIN	{
+	eval " use IO::String ";
+	$iostrings = $@ ? 0 : 1;
+}
+
 
 my $debug_get = 0;
 my $debug_mget = 0;
@@ -36,6 +44,7 @@ my $bloc = " bloc";
 my $UNDEFDESC = "! undefined\n";
 my $undef = bless { $debg => $UNDEFDESC, $text => '' }, __PACKAGE__;
 my $dseq = "O0000000";
+our $nonext;
 
 my $line;
 my $fh;
@@ -44,6 +53,13 @@ use overload
 	'bool' => \&defined,
 	'""' => \&text,
 	'fallback' => 1;
+
+sub stringconfig
+{
+	Carp::croak 'IO::Strings need to be installed to use "stringconfig"'
+		. ' install it or use "readconfig" instead.' unless $iostrings;
+	readconfig(IO::String->new(join("\n",@_)));
+}
 
 sub readconfig
 {
@@ -59,8 +75,12 @@ sub rc1
 {
 	my ($indent, $seq, $parent, $dcon) = @_;
 	my $last;
-	my $config = bless { $cntx => $parent, $bloc => 1 }, __PACKAGE__;
+	my $config = bless { $bloc => 1 }, __PACKAGE__;
+
 	$config->{$debg} = "BLOCK:$dseq:$dcon" if $ddata;
+
+	$config->{$cntx} = $parent;
+	weaken $config->{$cntx};
 
 	$dseq++;
 	for(;$line;$line = <$fh>) {
@@ -116,12 +136,49 @@ sub rc1
 		$context->{$seqn} = $seq++;
 		$context->{$text} = $line;
 		die if $context->{$cntx};
-		$context->{$cntx} = $config;
 
-		($last ? $last : $config)->{$next} = $context
-			unless $Cisco::Reconfig::nonext;
+		$context->{$cntx} = $config;
+		weaken $context->{$cntx};
+
+		unless ($nonext) {
+			if ($last) {
+				$last->{$next} = $context;
+				weaken $last->{$next};
+			} else {
+				$config->{$next} = $context;
+				weaken $config->{$next};
+			}
+		}
 
 		$last = $context;
+
+		if ($line =~ /\^C\r?$/) {
+			#
+			# big special case for banners 'cause they don't follow
+			# normal indenting rules
+			#
+			my $sub = $last->{$subs} = bless { $bloc => 1 }, __PACKAGE__;
+			$sub->{$cntx} = $last;
+			weaken $sub->{$cntx};
+			my $subnull = $sub->{''} = bless { $bloc => 1, $dupl => [] }, __PACKAGE__;
+			$subnull->{$cntx} = $sub;
+			weaken $subnull->{$cntx};
+			while ($line !~ /^\^C\r?$/) {
+				$line = <$fh>;
+				last unless $line;
+				my $l = bless { 
+					$ddata ? ( $debg => "$dseq:DUP:$line" ) : (),
+				}, __PACKAGE__;
+				$dseq++;
+				$l->{$seqn} = $seq++;
+				$l->{$text} = $line;
+				$l->{$cntx} = $subnull;
+				weaken($l->{$cntx});
+				push(@{$subnull->{$dupl}}, $l);
+			}
+			warn "parse probably failed"
+				unless $line !~ /^\^C[\r]?$/;
+		}
 	}
 	return $config;
 }
@@ -137,16 +194,7 @@ sub defined { $_[0]->{$debg} ? $_[0]->{$debg} ne $UNDEFDESC : 1 }
 
 sub destroy
 {
-	my (@d) = @_;
-	while (@d) {
-		my $self = shift(@d);
-		next if ! $self;
-		push(@d, map { $self->{$_} } grep(! /$spec/o, keys %$self));
-		push(@d, map { defined $self->{$_} ? $self->{$_} : () } 
-			$next, $subs, $cntx);
-		push(@d, @{$self->{$dupl}}) if $self->{$dupl};
-		%$self = ();
-	}
+	warn "Cisco::Reconfig::destroy is deprecated";
 }
 
 sub single
@@ -196,6 +244,8 @@ sub text
 	my (@p) = $self->sortit(grep(! /$spec/o, keys %$self));
 	if (@p > 1) {
 		return join('', map { $self->{$_}->text } @p);
+	} elsif ($self->{$dupl}) {
+		return join('', map { $_->{$text} } @{$self->{$dupl}});
 	}
 	die unless @p;
 	return $self->{$p[0]}->text;
@@ -480,7 +530,7 @@ sub get
 	print STDERR "\nGET <@designators> $self->{$debg}" if $debug_get;
 
 	return $self unless $self;
-	$self = $self->zoom;
+#	$self = $self->zoom;
 	$self = $self->subs
 		if $self->{$subs};
 

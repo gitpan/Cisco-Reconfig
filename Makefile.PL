@@ -9,7 +9,10 @@ WriteMakefile(
 	($] >= 5.005 ?
 	    ('ABSTRACT' => 'Parse Cisco-style configuration files',
 	     'AUTHOR'	=> 'David Muir Sharnoff <muir@idiom.com>') : ()),
-	'dist'   => {COMPRESS=>'gzip', SUFFIX=>'gz'}
+	'dist'   => {COMPRESS=>'gzip', SUFFIX=>'gz'},
+	'PREREQ_PM' => {
+		 'Scalar::Util' => 1.07,
+	},
 );
 
 package MY;
