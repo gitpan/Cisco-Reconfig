@@ -5,7 +5,7 @@ package Cisco::Reconfig;
 @EXPORT = qw(readconfig);
 @EXPORT_OK = qw(readconfig stringconfig);
 
-$VERSION = 0.4;
+$VERSION = 0.5;
 
 require Exporter;
 use strict;
@@ -93,7 +93,7 @@ sub rc1
 			die unless $last;
 			$last->{$subs} = rc1($in, "${seq}aaa", $last, $line);
 			undef $last;
-			redo;
+			redo if $line;
 		} elsif ($in < $indent) {
 			return $config;
 		}
@@ -152,7 +152,7 @@ sub rc1
 
 		$last = $context;
 
-		if ($line =~ /\^C\r?$/) {
+		if ($line && $line =~ /\^C\r?$/) {
 			#
 			# big special case for banners 'cause they don't follow
 			# normal indenting rules

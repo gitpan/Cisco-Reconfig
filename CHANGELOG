@@ -1,4 +1,11 @@
 
+= 2003/05/28 0.5
+
+Added a regression test for stringconfig().
+
+Fixed a warning when the last config file line was
+indented.  (found by Martin Lorensen <martin@lorensen.dk>)
+
 = 2003/05/27 0.4
 
 Oops, forgot to document the new string-based construtor

@@ -6,4 +6,6 @@ README
 CHANGELOG
 t/cisco.t
 t/smalltest.t
+t/stringconfig.t
+t/trailingindent.t
 t/banner.t
