@@ -12,10 +12,6 @@ use Scalar::Util qw(weaken);
 
 my $debugdump = 0;
 
-if ($debugdump) {
-	$Cisco::Reconfig::nonext = 1;
-}
-
 BEGIN { plan test => 6 };
 
 sub wok
@@ -31,17 +27,9 @@ sub wok
 my $config = readconfig(\*DATA);
 
 if ($debugdump) {
+	require Data::XDumper;
 	require File::Slurp;
-	require Data::Dumper;
-	import File::Slurp;
-	import Data::Dumper;
-	$Data::Dumper::Sortkeys = 1;
-	$Data::Dumper::Sortkeys = 1;
-	$Data::Dumper::Terse = 1;
-	$Data::Dumper::Terse = 1;
-	$Data::Dumper::Indent = 1;
-	$Data::Dumper::Indent = 1;
-	write_file("dumped", Dumper($config));
+	File::Slurp::write_file("dumped", join("\n",Data::XDumper::Dump($config)));
 	exit(0);
 }
 

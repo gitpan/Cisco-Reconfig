@@ -49,6 +49,19 @@ DESCRIPTION
 
             $config->get('ip as-path access-list')->all;
 
+    The word "no" is handled specially: it is discarded. Many cisco
+    directives start with the word "no". To make the module more usable, the
+    word "no" is ignored during parsing. It is kept in the text so, if you
+    look for something that might have a "no" in front of it, you'll get a
+    hit if the "no" is there or isn't there. For example:
+
+            my (@cdp_disabled);
+            for my $context ($config->get('interface')->all(qr{^ether}i)) {
+                    my $cdp = $context->get('cdp enable');
+                    push(@cdp_disabled, $context)
+                            if $cdp =~ /no cdp enable/;
+            }
+
 FUNCTIONS
     There is just one function provided: "readconfig()". Readconfig takes a
     single argument: a filename or file handle. It parses the file and
@@ -212,7 +225,7 @@ ACCESSOR METHODS
         represents the contents of the block.
 
         If the Cisco::Reconfig object in question does not represent the
-        start of a configuration block, the
+        start of a configuration block, the "undefined" object is returned.
 
     ->kids()
         For Cisco::Reconfig objects that do not uniquely specify a single

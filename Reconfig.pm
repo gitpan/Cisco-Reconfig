@@ -5,7 +5,7 @@ package Cisco::Reconfig;
 @EXPORT = qw(readconfig);
 @EXPORT_OK = qw(readconfig stringconfig);
 
-$VERSION = 0.7;
+$VERSION = 0.8;
 
 require Exporter;
 use strict;
@@ -95,7 +95,7 @@ sub rc1
 		my $no = $1;
 		if ($in > $indent) {
 			if ($last) {
-				$last->{$subs} = rc1($in, "${seq}aaa", $last, $line);
+				$last->{$subs} = rc1($in, "$last->{$seqn}aaa", $last, $line);
 				undef $last;
 				redo if $line;
 			} else {
@@ -125,8 +125,9 @@ sub rc1
 			# A duplicate line.  Not fun.
 			# As far as we know this can only occur as a remark inside 
 			# filter list.
-			# Q: what's the point of keeping track of these?  Not
-			# sure there is any.
+			# Q: what's the point of keeping track of these? Need to be
+			# able to accurately dump filter list definitions
+			#
 			$context->{$dupl} = [] 
 				unless $context->{$dupl};
 			my $n = bless { 
@@ -208,7 +209,7 @@ $line = "" unless defined $line;
 
 #sub word { $_[0]->{$word} };
 sub block { $_[0]->{$bloc} }
-sub seqn { $_[0]->{$seqn} || $_[0]->endpt->{$seqn} };
+sub seqn { $_[0]->{$seqn} || $_[0]->endpt->{$seqn} || die };
 sub subs { $_[0]->{$subs} || $_[0]->zoom->{$subs} || $undef };
 sub next { $_[0]->{$next} || $_[0]->zoom->{$next} || $undef };
 #sub undefined { $_[0] eq $undef }
@@ -259,6 +260,7 @@ sub endpt
 	return $self->{$p[0]}->endpt;
 }
 
+
 sub text 
 {
 	my ($self) = @_;
@@ -269,7 +271,12 @@ sub text
 	}
 	my (@p) = $self->sortit(grep(! /$spec/o, keys %$self));
 	if (@p > 1) {
-		return join('', map { $self->{$_}->text } @p);
+		# 
+		# This is nasty because the lines may not be ordered
+		# in the tree-hiearchy used by Cisco::Reconfig
+		#
+		my %temp = map { $self->{$_}->sequenced_text(0) } @p;
+		return join('', map { $temp{$_} } sort keys %temp);
 	} elsif ($self->{$dupl}) {
 		return join('', map { $_->{$word} . " " . $_->{$text} } @{$self->{$dupl}})
 			if $debug_text;
@@ -279,24 +286,40 @@ sub text
 	return $self->{$p[0]}->text;
 }
 
+sub sequenced_text
+{
+	my ($self, $all) = @_;
+	my @t = ();
+	if (defined $self->{$text}) {
+		push(@t, $debug_text
+			? ($self->seqn => $self->{$word} . " " . $self->{$text})
+			: ($self->seqn => $self->{$text}));
+	}
+	if (exists $self->{$dupl}) {
+		push (@t, $debug_text
+			? map { $_->seqn => $_->{$word} . " " . $_->{$text} } @{$self->{$dupl}}
+			: map { $_->seqn => $_->{$text} } @{$self->{$dupl}});
+	}
+	my (@p) = $self->sortit(grep(! /$spec/o, keys %$self));
+	if (@p) {
+		# 
+		# This is nasty because the lines may not be ordered
+		# in the tree-hiearchy used by Cisco::Reconfig
+		#
+		return (@t, map { $self->{$_}->sequenced_text($all) } @p);
+	} 
+	push(@t, $self->{$subs}->sequenced_text($all))
+		if $all && $self->{$subs};
+	return @t if @t;
+	die unless @p;
+	return $self->{$p[0]}->sequenced_text($all);
+}
+
 sub alltext 
 {
 	my ($self) = @_;
-	my $t = '';
-	$t = $self->{$text} 
-		if defined $self->{$text};
-	my (@p) = $self->sortit(grep(! /$spec/o, keys %$self));
-	if (@p > 1) {
-		$t .= join('', map { $self->{$_}->alltext } @p);
-	} elsif ($self->{$dupl}) {
-		$t .= join('', map { $_->{$text} } @{$self->{$dupl}});
-	} elsif (@p == 1) {
-		$t .= $self->{$p[0]}->alltext;
-	}
-	if ($self->{$subs}) {
-		$t .= $self->{$subs}->alltext;
-	}
-	return $t;
+	my %temp = $self->sequenced_text(1);
+	return join('', map { $temp{$_} } sort keys %temp);
 }
 
 sub chomptext

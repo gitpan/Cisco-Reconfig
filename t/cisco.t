@@ -9,11 +9,11 @@ use strict;
 
 my $debugdump = 0;
 
-if ($debugdump) {
-	$Cisco::Reconfig::nonext = 1;
-}
+#if ($debugdump) {
+#	$Cisco::Reconfig::nonext = 1;
+#}
 
-BEGIN { plan test => 41 };
+BEGIN { plan test => 43 };
 
 sub wok
 {
@@ -28,21 +28,14 @@ sub wok
 my $config = readconfig(\*DATA);
 
 if ($debugdump) {
+	require Data::XDumper;
 	require File::Slurp;
-	require Data::Dumper;
-	import File::Slurp;
-	import Data::Dumper;
-	$Data::Dumper::Sortkeys = 1;
-	$Data::Dumper::Sortkeys = 1;
-	$Data::Dumper::Terse = 1;
-	$Data::Dumper::Terse = 1;
-	$Data::Dumper::Indent = 1;
-	$Data::Dumper::Indent = 1;
-	write_file("dumped", Dumper($config));
+	File::Slurp::write_file("dumped", join("\n",Data::XDumper::Dump($config)));
 	exit(0);
 }
 
 ok(defined $config);
+
 
 # -----------------------------------------------------------------
 {
@@ -577,6 +570,35 @@ END
 
 }
 # -----------------------------------------------------------------
+{
+
+my $x = $config->get('ip access-list extended filter')->subs()->text();
+ok($x,<<END);
+ remark 
+ remark ESTABLISHED CONNECTIONS LIVE
+ deny ip any host 10.0.0.1
+ permit tcp any any established
+ remark 
+ remark now we'll do something nasty
+ remark now we'll do something nasty too
+ remark the above lines are only legal in comments
+END
+
+}
+# -----------------------------------------------------------------
+{
+
+my $c = 0;
+for my $context ($config->get('interface')->all(qr{^ether}i)) {
+	#print $context;
+	my $x = $context->get('cdp enable');
+	#print $x if $x;
+	$c++ if $x =~ /no cdp enable/;
+	#print "c=$c\n";
+}
+ok($c,1);
+
+}
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
 
@@ -584,31 +606,6 @@ END
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
 {
-
-	if (0) {
-		# see what's not isweak().
-
-		use Scalar::Util qw(isweak);
-		use Data::Dumper;
-		my %done;
-		my (@d) = $config;
-		while (@d) {
-			my $self = shift(@d);
-			next if $done{$self}++;
-			for my $k (%$self) {
-				if (ref $self->{$k}) {
-					if (isweak $self->{$k}) {
-						delete $self->{$k};
-					} else {
-						push(@d, $self->{$k});
-					}
-				} else {
-					delete $self->{$k};
-				}
-			}
-		}
-		print STDERR Dumper($config);
-	}
 
 # last test
 
@@ -719,6 +716,7 @@ interface Tunnel3
 interface Ethernet0
  ip address 128.32.32.3 255.255.255.192
  ip ospf authentication-key guilty
+ no cdp enable
 !
 interface Serial0
  description Cross-connect to Foobar
@@ -867,6 +865,7 @@ access-list 151 permit ip any any
 ip access-list extended filter
  remark 
  remark ESTABLISHED CONNECTIONS LIVE
+ deny ip any host 10.0.0.1
  permit tcp any any established
  remark 
  remark now we'll do something nasty
