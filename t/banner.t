@@ -13,7 +13,7 @@ if ($debugdump) {
 	$Cisco::Reconfig::nonext = 1;
 }
 
-BEGIN { plan test => 2 };
+BEGIN { plan test => 6 };
 
 sub wok
 {
@@ -69,7 +69,45 @@ END
 
 }
 # -----------------------------------------------------------------
+{
+
+my $x = $config->get('banner testa');
+ok($x->subs->text, <<END);
+
+   A device
+
+^C
+END
+
+}
 # -----------------------------------------------------------------
+{
+
+my $x = $config->get('banner testb');
+ok($x->subs->text, <<END);
+
+   A device^C
+END
+
+}
+# -----------------------------------------------------------------
+{
+
+my $x = $config->get('banner testc');
+ok($x->text, <<END);
+banner testc ^C A device ^C
+END
+
+}
+# -----------------------------------------------------------------
+{
+
+my $x = $config->get('service');
+ok($x->text, <<END);
+service tcp-small-servers
+END
+
+}
 # -----------------------------------------------------------------
 
 
@@ -102,3 +140,15 @@ revealed.
 ^C
 !
 hostname humble
+!
+banner testa ^CCCCCC
+
+   A device
+
+^C
+banner testb ^C
+
+   A device^C
+banner testc ^C A device ^C
+!username stat password <removed>
+

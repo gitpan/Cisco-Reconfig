@@ -5,7 +5,7 @@ package Cisco::Reconfig;
 @EXPORT = qw(readconfig);
 @EXPORT_OK = qw(readconfig stringconfig);
 
-$VERSION = 0.6;
+$VERSION = 0.7;
 
 require Exporter;
 use strict;
@@ -25,10 +25,12 @@ my $debug_get = 0;
 my $debug_mget = 0;
 my $debug_set = 0;
 my $debug_context = 0;
+my $debug_text = 0;
 my $ddata = $debug_get 
 	|| $debug_mget 
 	|| $debug_set
 	|| $debug_context
+	|| $debug_text
 	|| 0; # add debugging data to data structures
 
 my $spec = qr{^ };
@@ -36,7 +38,7 @@ my $text = " text";
 my $subs = " subs";
 my $next = " next";
 my $cntx = " cntx";
-#my $word = " word";
+my $word = " word";
 my $seqn = " seqn";
 my $dupl = " dupl";
 my $debg = " debg";
@@ -98,7 +100,7 @@ sub rc1
 				redo if $line;
 			} else {
 				# this really shouldn't happen.  But it does.
-				die unless $prev eq "!\n";
+				die unless $prev eq "!\n" || $prev =~ /^!.*<removed>$/;
 				die unless $indent == 0;
 				$ciscobug = 1;
 				$indent = $in;
@@ -128,8 +130,10 @@ sub rc1
 			$context->{$dupl} = [] 
 				unless $context->{$dupl};
 			my $n = bless { 
-#				$word => $context->{$word},
-				$ddata ? ( $debg => "$dseq:DUP:$line" ) : (),
+				$ddata 
+					? ( $debg => "$dseq:DUP:$line", 
+					    $word => $context->{$word}, ) 
+					: (),
 			}, __PACKAGE__;
 			$dseq++;
 
@@ -140,9 +144,14 @@ sub rc1
 		}
 		while (@x) {
 			my $x = shift @x;
+die unless defined $x;
+die unless defined $dseq;
+$line = "" unless defined $line;
 			$context = $context->{$x} = bless { 
-#				$word => $x,
-				$ddata ? ( $debg => "$dseq:$x:$line" ) : (),
+				$ddata 
+					? ( $debg => "$dseq:$x:$line", 
+					    $word => $x, ) 
+					: (),
 			}, __PACKAGE__;
 			$dseq++;
 		}
@@ -165,7 +174,7 @@ sub rc1
 
 		$last = $context;
 
-		if ($line && $line =~ /\^C\r?$/) {
+		if ($line && $line =~ /\^C/ && $line !~ /\^C.*\^C/) {
 			#
 			# big special case for banners 'cause they don't follow
 			# normal indenting rules
@@ -176,7 +185,7 @@ sub rc1
 			my $subnull = $sub->{''} = bless { $bloc => 1, $dupl => [] }, __PACKAGE__;
 			$subnull->{$cntx} = $sub;
 			weaken $subnull->{$cntx};
-			while ($line !~ /^\^C\r?$/) {
+			for(;;) {
 				$line = <$fh>;
 				last unless $line;
 				my $l = bless { 
@@ -188,9 +197,10 @@ sub rc1
 				$l->{$cntx} = $subnull;
 				weaken($l->{$cntx});
 				push(@{$subnull->{$dupl}}, $l);
-			}
+				last if $line =~ /\^C\r?$/;
+			} 
 			warn "parse probably failed"
-				unless $line =~ /^\^C[\r]?$/;
+				unless $line =~ /\^C[\r]?$/;
 		}
 	}
 	return $config;
@@ -252,12 +262,17 @@ sub endpt
 sub text 
 {
 	my ($self) = @_;
-	return $self->{$text} 
-		if defined $self->{$text};
+	if (defined $self->{$text}) {
+		return $debug_text
+			? $self->{$word} . " " . $self->{$text}
+			: $self->{$text};
+	}
 	my (@p) = $self->sortit(grep(! /$spec/o, keys %$self));
 	if (@p > 1) {
 		return join('', map { $self->{$_}->text } @p);
 	} elsif ($self->{$dupl}) {
+		return join('', map { $_->{$word} . " " . $_->{$text} } @{$self->{$dupl}})
+			if $debug_text;
 		return join('', map { $_->{$text} } @{$self->{$dupl}});
 	}
 	die unless @p;
@@ -562,16 +577,17 @@ sub get
 
 	print STDERR "\nGET <@designators> $self->{$debg}" if $debug_get;
 
+
 	return $self unless $self;
-#	$self = $self->zoom;
-	$self = $self->subs
-		if $self->{$subs};
+	my $zoom = $self->zoom->subs;
+	$self = $zoom if $zoom;
 
 	print STDERR "\nZOOMSUB $self->{$debg}" if $debug_get;
 
 	while (@designators) {
 		my $designator = shift(@designators);
 #		$self = $self->zoom;
+	#	$self = $self->single || $self;
 		print STDERR "\nDESIGNATOR: $designator.  ZOOMED: $self->{$debg}\n"
 			if $debug_get;
 		for my $d (split(' ',$designator)) {

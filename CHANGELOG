@@ -1,3 +1,13 @@
+
+= 2003/12/02 0.7
+
+Charles Arsenault <charlesa@teleglobe.net> requested more flexibility
+in banner statements and also support for RANCID's <removed> lines.
+He sent a patch.
+
+Andrew Fort <afort@uecomm.com.au> reported a bug where the get() method
+did not act as expected.  Subtle.  Fixed.
+
 = 2003/06/10 0.6
 
 "Fix" bug https://rt.cpan.org/Ticket/Display.html?id=2749 reported

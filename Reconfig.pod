@@ -184,9 +184,10 @@ an object that would be returned by the code that follows.
 	my $address_word = $config->get('interface Loopback0', 'ip')
 		->all(qr{^address});
 
-C<single()> answers the question: does this Cisco::Reconfig object uniquely
-specify a single line?  In the example above, the object for word
-C<ip> (above) does not but the object for the word C<address> does.
+C<single()> answers the question: does this Cisco::Reconfig object
+uniquely specify a single point in the configuration?  In the example
+above, the object for word C<ip> (above) does not but the object
+for the word C<address> does.
 
 C<single()> returns an object (representing the last word on the
 line) or undef.
