@@ -7,6 +7,7 @@ Cisco::Reconfig - Parse and generate Cisco configuration files
 	use Cisco::Reconfig;
 
 	my $config = readconfig("/my/cisco/config");
+	my $config = stringconfig("cisco config", "goes here");
 
 =head1 DESCRIPTION
 

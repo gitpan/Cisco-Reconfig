@@ -5,6 +5,7 @@ SYNOPSIS
             use Cisco::Reconfig;
 
             my $config = readconfig("/my/cisco/config");
+            my $config = stringconfig("cisco config", "goes here");
 
 DESCRIPTION
     Cisco::Reconfig makes it easier to write programs to generate changes to

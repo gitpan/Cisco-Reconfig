@@ -5,7 +5,7 @@ package Cisco::Reconfig;
 @EXPORT = qw(readconfig);
 @EXPORT_OK = qw(readconfig stringconfig);
 
-$VERSION = 0.3;
+$VERSION = 0.4;
 
 require Exporter;
 use strict;

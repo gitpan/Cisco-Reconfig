@@ -1,4 +1,9 @@
 
+= 2003/05/27 0.4
+
+Oops, forgot to document the new string-based construtor
+(from Martin Lorensen <martin@lorensen.dk>)
+
 = 2003/05/26 0.3
 
 Replaced destroy() with Scalar::Util::weaken at the suggestion and
