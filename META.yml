@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Cisco-Reconfig
-version:            0.9
+version:            0.91
 abstract:           Parse Cisco-style configuration files
 author:
     - David Muir Sharnoff <cpan@dave.sharnoff.org>
