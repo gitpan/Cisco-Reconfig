@@ -5,7 +5,7 @@ package Cisco::Reconfig;
 @EXPORT = qw(readconfig);
 @EXPORT_OK = qw(readconfig stringconfig $minus_one_indent_rx);
 
-$VERSION = 0.91;
+$VERSION = '0.901';
 
 require Exporter;
 use strict;
@@ -16,6 +16,9 @@ use IO::File;
 use Scalar::Util qw(weaken);
 my $iostrings;
 our $allow_minus_one_indent = qr/class /;
+our $allow_plus_one_indent = qr/service-policy /;
+our $bad_indent_policy = 'DIE';
+
 
 BEGIN	{
 	eval " use IO::String ";
@@ -101,16 +104,31 @@ sub rc1
 				undef $last;
 				redo if $line;
 			} else {
-				# this really shouldn't happen.  But it does.
-				confess "<$.:$_>" unless $prev eq "!\n" || $prev =~ /^!.*<removed>$/;
-				confess unless $indent == 0;
+				# This really shouldn't happen.  But it does.  It's a violation of
+				# the usual indentation rules.
+				#
+				# An exclamation marks a reset of the indentation to zero.
+				#
+				if ($indent + 1 == $in && $allow_plus_one_indent && $line =~ /^\s*$allow_plus_one_indent/) {
+					$indent = $indent + 1;
+					redo;
+				}
+				if ($indent != 0 || ($prev ne "!\n" && $prev !~ /^!.*<removed>$/)) {
+					if ($bad_indent_policy eq 'IGNORE') {
+						# okay then
+					} elsif ($bad_indent_policy eq 'WARN') {
+						warn "Unexpected indentation change <$.:$_>";
+					} else {
+						confess "Unexpected indentation change <$.:$_>";
+					}
+				}
 				$ciscobug = 1;
 				$indent = $in;
 			}
 		} elsif ($in < $indent) {
 			if ($ciscobug && $in == 0) {
 				$indent = 0;
-			} elsif ($last && $allow_minus_one_indent && $line =~ /^\s*$allow_minus_one_indent/) {
+			} elsif ($last && $indent - 1 == $in && $allow_minus_one_indent && $line =~ /^\s*$allow_minus_one_indent/) {
 				confess unless $last->{$seqn};
 				$last->{$subs} = rc1($in, "$last->{$seqn}aaa", $last, $line);
 				undef $last;
@@ -182,11 +200,17 @@ sub rc1
 
 		$last = $context;
 
-		if ($line && $line =~ /\^C/ && $line !~ /\^C.*\^C/) {
+		if ($line && 
+			($line =~ /(\^C)/ && $line !~ /\^C.*\^C/)
+			|| 
+			($line =~ /banner [a-z\-]+ ((?!\^C).+)/))
+		{
 			#
 			# big special case for banners 'cause they don't follow
 			# normal indenting rules
 			#
+			die unless defined $1;
+			my $sep = qr/\Q$1\E/;
 			my $sub = $last->{$subs} = bless { $bloc => 1 }, __PACKAGE__;
 			$sub->{$cntx} = $last;
 			weaken $sub->{$cntx};
@@ -205,10 +229,10 @@ sub rc1
 				$l->{$cntx} = $subnull;
 				weaken($l->{$cntx});
 				push(@{$subnull->{$dupl}}, $l);
-				last if $line =~ /\^C\r?$/;
+				last if $line =~ /$sep[\r]?$/;
 			} 
 			warn "parse probably failed"
-				unless $line =~ /\^C[\r]?$/;
+				unless $line && $line =~ /$sep[\r]?$/;
 		}
 	}
 	return $config;
